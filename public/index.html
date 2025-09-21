@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SolarChat — Inbox</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Segoe UI,Arial,sans-serif;margin:0;background:#f8fafc}
+    header{padding:12px 16px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:space-between}
+    .wrap{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 56px)}
+    #threads{border-right:1px solid #e5e7eb;overflow:auto;background:#fff}
+    #messages{overflow:auto;padding:16px}
+    .item{padding:12px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer}
+    .item:hover{background:#f8fafc}
+    .bubble{max-width:70%;margin:8px;padding:10px 12px;border-radius:12px;background:#e5e7eb;display:inline-block}
+    .bubble.out{background:#dbeafe;margin-left:auto}
+    .composer{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid #e5e7eb}
+    input,button,textarea{padding:10px 12px;font-size:14px} input,textarea{border:1px solid #cbd5e1;border-radius:8px} button{border:0;border-radius:8px;background:#0f172a;color:#fff;cursor:pointer}
+  </style>
+</head>
+<body>
+<header>
+  <strong>SolarChat</strong>
+  <div><button id="logout">Sair</button></div>
+</header>
+<div class="wrap">
+  <div id="threads"></div>
+  <div style="display:flex;flex-direction:column">
+    <div id="messages"></div>
+    <div class="composer">
+      <input id="to" placeholder="55DDDNUMERO" style="width:220px">
+      <textarea id="body" placeholder="Digite sua mensagem..." style="flex:1;min-height:42px"></textarea>
+      <button id="send">Enviar</button>
+    </div>
+  </div>
+</div>
+<script>
+  let cache = []; let current = null;
+  function token(){ return localStorage.getItem('token'); }
+  function authHeaders(){ return { 'Authorization':'Bearer '+token() }; }
+  if(!token()) location.href = '/login.html';
+
+  async function load(){
+    const r = await fetch('/api/messages',{ headers: authHeaders() });
+    if(r.status===401){ localStorage.removeItem('token'); location.href='/login.html'; return; }
+    cache = await r.json(); renderThreads(); renderMessages();
+  }
+  function uniqueThreads(list){ const map=new Map(); list.forEach(m=>{const k=m.from; if(!map.has(k)) map.set(k,{from:m.from,name:m.name,last:m.ts}); else if(m.ts>map.get(k).last) map.get(k).last=m.ts;}); return Array.from(map.values()).sort((a,b)=>b.last-a.last); }
+  function renderThreads(){ const el=document.getElementById('threads'); const items=uniqueThreads(cache).map(t=>{const active=current===t.from?'background:#eef;':''; return `<div class="item" style="${active}" onclick="selectThread('${t.from}')"><div><strong>${t.name}</strong></div><small>${t.from}</small></div>`;}).join(''); el.innerHTML = items || '<div class="item">Sem mensagens ainda</div>'; }
+  function renderMessages(){ const el=document.getElementById('messages'); const list=cache.filter(m=> current?m.from===current:true).sort((a,b)=>a.ts-b.ts); el.innerHTML = list.map(m=>`<div class="bubble ${m.direction==='in'?'in':'out'}">${m.text}</div>`).join(''); const to=document.getElementById('to'); if(current) to.value=current; el.scrollTop=el.scrollHeight; }
+  function selectThread(from){ current=from; renderThreads(); renderMessages(); }
+  document.getElementById('send').onclick = async ()=>{ const to=document.getElementById('to').value.trim(); const body=document.getElementById('body').value.trim(); if(!to||!body) return alert('Preencha número e mensagem'); const r=await fetch('/api/send',{method:'POST', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify({to, body})}); if(!r.ok){ const j=await r.json(); alert('Erro: '+(j.error||JSON.stringify(j))); return; } document.getElementById('body').value=''; setTimeout(load,800); };
+  document.getElementById('logout').onclick = ()=>{ localStorage.removeItem('token'); location.href='/login.html'; };
+  setInterval(load, 3000); load();
+</script>
+</body>
+</html>
