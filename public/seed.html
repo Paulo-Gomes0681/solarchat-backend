@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Seed Admin</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f6f7fb;margin:0;display:flex;justify-content:center;align-items:center;height:100vh}
+    form{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;min-width:320px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+    input,button{padding:10px 12px;font-size:14px} input{border:1px solid #cbd5e1;border-radius:8px}
+    button{border:0;border-radius:8px;background:#0f172a;color:#fff;cursor:pointer}
+    small{color:#6b7280}
+  </style>
+</head>
+<body>
+  <form id="f">
+    <h3>Seed do primeiro admin</h3>
+    <input id="name"  placeholder="Nome"   value="Paulo" required>
+    <input id="email" type="email" placeholder="Email" value="admin@solarmix.com.br" required>
+    <input id="pass"  type="password" placeholder="Senha" value="SenhaForte#2024" required>
+    <input id="seed"  placeholder="ADMIN_SEED" value="criar-admin-uma-vez" required>
+    <button>Criar admin</button>
+    <small id="msg"></small>
+  </form>
+
+<script>
+document.getElementById('f').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = {
+    seed: document.getElementById('seed').value.trim(),
+    name: document.getElementById('name').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    password: document.getElementById('pass').value
+  };
+  const r = await fetch('/auth/seed-admin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json();
+  document.getElementById('msg').textContent = JSON.stringify(j);
+};
+</script>
+</body>
+</html>
